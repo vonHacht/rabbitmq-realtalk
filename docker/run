@@ -1,0 +1,7 @@
+#!/bin/bash
+
+docker stop some-rabbit
+
+docker rm some-rabbit
+
+docker run -d --hostname my-rabbit --name some-rabbit -p 1337:15672 rabbitmq:3-management

@@ -44,11 +44,13 @@ project.ext {
 
     PYTHON_VIRTUAL_ENV_LOCATION = "python\\python_virtual_enviroment"
 
-    PYTHON_VIRTUAL_ENV_PY = "python\\python_virtual_enviroment\\virtualenv.py"
+    PYTHON_VIRTUAL_ENV_LOCATION_RUNNABLE = "${PYTHON_VIRTUAL_ENV_LOCATION}\\venv"
 
-    PYTHON_VIRTUAL_ENV_CLONE_PY = "python\\python_virtual_enviroment\\clonevirtualenv.py"
+    PYTHON_VIRTUAL_ENV_PY = "${PYTHON_VIRTUAL_ENV_LOCATION}\\virtualenv.py"
 
-    PYTHON_VIRTUAL_ENV_EASY_INSTALL_PY = "python\\python_virtual_enviroment\\easy_install.py"
+    PYTHON_VIRTUAL_ENV_CLONE_PY = "${PYTHON_VIRTUAL_ENV_LOCATION}\\clonevirtualenv.py"
+
+    PYTHON_VIRTUAL_ENV_EASY_INSTALL_PY = "${PYTHON_VIRTUAL_ENV_LOCATION}\\easy_install.py"
 
 }
 
@@ -95,6 +97,15 @@ task SetupPipenv(type: Exec) {
     commandLine PYTHON_3_PIP_EXE, "install", "--ignore-installed", "pipenv", "-t", PYTHON_VIRTUAL_ENV_LOCATION
 }
 
+task InitializeVirtualEnviroment(type: Exec) {
+    dependsOn SetupPipenv
+
+    group = "Python"
+
+    commandLine PYTHON_3_EXE, PYTHON_VIRTUAL_ENV_PY, "-p${PYTHON_3_EXE}", PYTHON_VIRTUAL_ENV_LOCATION_RUNNABLE
+}
+
+/*
 task SolvePythonPackages() {
     dependsOn SetupPipenv
 
@@ -106,4 +117,4 @@ task SolvePythonPackages() {
         }
     }
 }
-
+*/

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+VIRTUAL_ENV_ACTIVATE_PATH=$1
+PYTHON_REQUIREMENTS_PATH=$2
+PYTHON_SCRIPT_PATH=$3
+
+RABBIT_MESSAGE=$4
+RABBIT_HOST=$5
+RABBIT_PORT=$6
+RABBIT_VHOST=$7
+RABBIT_USERNAME=$8
+RABBIT_PASSWORD=$9
+
+echo "Activating Python Virtual Enviroment From: ${VIRTUAL_ENV_ACTIVATE_PATH}"
+source $VIRTUAL_ENV_ACTIVATE_PATH
+echo "Virtual Enviroment Located in: $(pwd)"
+
+echo "Packages Marked for Installation via Pip:"
+cat $PYTHON_REQUIREMENTS_PATH
+pip install -r $PYTHON_REQUIREMENTS_PATH
+
+echo "Running: ${PYTHON_SCRIPT_PATH}"
+./$PYTHON_SCRIPT_PATH\
+ --message=$RABBIT_MESSAGE\
+ --host=$RABBIT_HOST\
+ --port=$RABBIT_PORT\
+ --vhost=$RABBIT_VHOST\
+ --username=$RABBIT_USERNAME\
+ --password=$RABBIT_PASSWORD
+
+deactivate
+exit $?

@@ -31,8 +31,7 @@ allprojects {
 project.ext {
     /*
         NOTE:
-        Some abspath due to not-getting-stuck ..., have to be changed 
-        if running in another domain.
+        Edit these for your need before running gradle
     */
     CURL_EXE = "C:\\WINDOWS\\system32\\curl.exe"
 
@@ -42,7 +41,9 @@ project.ext {
 
     PYTHON_3_PIP_EXE = "C:\\python3\\Scripts\\pip.exe"
 
-    PYTHON_VIRTUAL_ENV_LOCATION = "python\\python_virtual_enviroment"
+    PYTHON_PATH = "python"
+
+    PYTHON_VIRTUAL_ENV_LOCATION = "${PYTHON_PATH}\\python_virtual_enviroment"
 
     PYTHON_VIRTUAL_ENV_LOCATION_RUNNABLE = "${PYTHON_VIRTUAL_ENV_LOCATION}\\venv"
 
@@ -52,8 +53,24 @@ project.ext {
 
     PYTHON_VIRTUAL_ENV_EASY_INSTALL_PY = "${PYTHON_VIRTUAL_ENV_LOCATION}\\easy_install.py"
 
+    PYTHON_VIRTUAL_ENV_ACTIVATE = "${PYTHON_VIRTUAL_ENV_LOCATION_RUNNABLE}\\Scripts\\activate"
+
+    PYTHON_RABBITMQ_SCRIPT_PATH = "${PYTHON_PATH}\\test-rabbitmq.py"
+
+    PYTHON_PIP_REQUIREMENT_PATH = "${PYTHON_PATH}\\requirements.txt"
+
+    RABBITMQ_HOST = "localhost"
+
+    RABBITMQ_PORT = "5672"
+
+    RABBITMQ_VHOST = "myvhost"
+
+    RABBITMQ_USERNAME = "guest"
+
+    RABBITMQ_PASSWORD = "guest"
 }
 
+/*
 ["pika", "requests"].each {
     tasks.create(name: "easyinstall_"+it, type: Exec) {
         group = "Python"
@@ -65,7 +82,7 @@ project.ext {
         commandLine PYTHON_3_EXE, PYTHON_VIRTUAL_ENV_EASY_INSTALL_PY, "${rawPackageName}"
     }
 }
-
+*/
 
 /*
     == TASKS ==
@@ -103,6 +120,25 @@ task InitializeVirtualEnviroment(type: Exec) {
     group = "Python"
 
     commandLine PYTHON_3_EXE, PYTHON_VIRTUAL_ENV_PY, "-p${PYTHON_3_EXE}", PYTHON_VIRTUAL_ENV_LOCATION_RUNNABLE
+}
+
+task TestRabbitMQ(type: Exec) {
+    dependsOn InitializeVirtualEnviroment
+
+    group = "Python"
+
+    String rabbitMqMessage = "Hello"
+
+    commandLine "bash", "./python/run_test-rabbitmq",\
+ "${PYTHON_VIRTUAL_ENV_ACTIVATE}",\
+ "${PYTHON_PIP_REQUIREMENT_PATH}",\
+ "${PYTHON_RABBITMQ_SCRIPT_PATH}",\
+ "${rabbitMqMessage}",\
+ "${RABBITMQ_HOST}",\
+ "${RABBITMQ_PORT}",\
+ "${RABBITMQ_VHOST}",\
+ "${RABBITMQ_USERNAME}",\
+ "${RABBITMQ_PASSWORD}"
 }
 
 /*

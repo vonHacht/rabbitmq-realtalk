@@ -2,7 +2,7 @@
     Jenkins Pipeline
 */
 
-pipeline {
+pipelineJob("RabbitMQ Pipeline Job") {
     agent any 
     stages {
         stage('Get List of Vhost') { 

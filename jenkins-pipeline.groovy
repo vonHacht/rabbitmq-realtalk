@@ -1,19 +1,15 @@
+/*
+    Jenkins Pipeline
+*/
+
 pipeline {
     agent any 
     stages {
-        stage('Build') { 
+        stage('Get List of Vhost') { 
             steps {
-                // 
-            }
-        }
-        stage('Test') { 
-            steps {
-                // 
-            }
-        }
-        stage('Deploy') { 
-            steps {
-                // 
+                sh'''
+                    curl -i -u guest:guest http://localhost:15672/api/vhosts
+                ''' 
             }
         }
     }

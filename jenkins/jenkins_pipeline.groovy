@@ -154,57 +154,20 @@ class RabbitMQ {
    }
 
    def createExchangeJob() {
-      dslFactory.pipelineJob("RabbitMQ - create new Exchange (${host})") {
-         parameters {
-            stringParam('VHOST_NAME', '', 'Name of already existing RabbitMQ Virtual Host' )
-            stringParam('EXCHANGE_NAME', '', 'Name of new RabbitMQ Exchange' )
-            choiceParam('EXCHANGE_TYPE', ['Direct exchange', 'Fanout exchange', 'Topic exchange', 'Headers exchange'], 'Type of the new exchange')
-         }
+      def exchangeMap = [
+         vhost: true, 
+         exchangename: true, 
+         exchangetype: true, 
+         queue: false
+         ]
+         
+      def exchangeApi = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}"
+      def exchangeJson = "{\\"type\\":\\"\${exchangeType}\\",\\"auto_delete\\":false,\\"durable\\":true,\\"internal\\":false,\\"arguments\\":{}}"
 
-         definition {
-            cps {
-               sandbox()
+      this.createJobTemplate("RabbitMQ - create new Exchange (${host})", exchangeMap, exchangeApi, exchangeJson)
+   }
 
-               script("""
-
-                  def exchangeType = ''
-
-                  switch ("\${EXCHANGE_TYPE}") {
-                     case 'Direct exchange':
-                        exchangeType = 'direct'
-                        break
-                     case 'Fanout exchange':
-                        exchangeType = 'fanout'
-                        break
-                     case 'Topic exchange':
-                        exchangeType = 'topic'
-                        break
-                     case 'Headers exchange':
-                        exchangeType = 'headers'
-                        break
-                  }
-
-                  def api = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}"
-                  def addess = "http://${host}:${port}/\$api"
-                  def credentials = "${username}:${password}"
-                  def contentType = "content-type:application/json"
-
-                  def json = "{\\"type\\":\\"\${exchangeType}\\",\\"auto_delete\\":false,\\"durable\\":true,\\"internal\\":false,\\"arguments\\":{}}"
-
-                  node("${nodeLabel}") {
-                     stage('Creates a new Virtual Host') {
-                        withEnv (["ADRESS=\${addess}", "CREDENTIALS=\${credentials}", "CONTENTTYPE=\${contentType}", "JSON=\${json}"]) {
-                           sh script: '''
-                              curl -i -u "\$CREDENTIALS" -H "\$CONTENTTYPE" -XPUT -d"\$JSON" "\$ADRESS"
-                           '''
-                        }
-                     }
-                  }
-                """)
-               }
-            }
-         }
-   } /* == createExchangeJob END == */
+   def createQueueJob() {} 
 
    def createPublishJob() {} 
 }

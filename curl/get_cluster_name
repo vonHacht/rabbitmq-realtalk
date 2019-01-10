@@ -1,0 +1,5 @@
+#!/bin/bash
+
+CLUTER_NAME=$(curl --silent -u guest:guest http://192.168.0.3:1337/api/cluster-name)
+CLUSTER_NAME_SED=$(sed '/{"name":(.*)}/' "${CLUTER_NAME}")
+echo "${CLUSTER_NAME_SED}"

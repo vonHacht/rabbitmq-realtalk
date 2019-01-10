@@ -4,11 +4,12 @@
     Settings
 */
 
-def host = "192.168.0.3"
+def host = "192.168.0.4"
 def port = "1337"
 def username = "guest"
 def password = "guest"
 def nodeLabel = "utility-slave"
+def clusterName = "rabbit@my-rabbit"
 
 
 class RabbitMQ {
@@ -18,7 +19,20 @@ class RabbitMQ {
    def port
    def username
    def password
+   def clusterName
    def nodeLabel
+
+   private def getClusterName() {
+      /*
+         TODO: It should be possible to figure out the cluster name by calling RabbitMQ
+         def name='curl -i -u ${username}:${password} http://${host}:${port}/api/cluster-name'.execute().text 
+      */
+      return "${clusterName}"
+   }
+
+   private def jsonArgumentFix(json) {
+      return """\'${json}\'"""
+   }
 
    private def listJobTemplate(pipelineJobName, api) {
        dslFactory.pipelineJob("${pipelineJobName}") {
@@ -35,7 +49,7 @@ class RabbitMQ {
                             stage("Conduction listings") {
                                 withEnv (["ADRESS=\${addess}", "CREDENTIALS=\${credentials}"]) {
                                     sh script: '''
-                                        curl -i -u "\$CREDENTIALS" "\$ADRESS"
+                                        curl --silent -i -u "\$CREDENTIALS" "\$ADRESS"
                                     '''
                                 }
                             }
@@ -46,7 +60,7 @@ class RabbitMQ {
        }
    }
 
-   private def createJobTemplate(pipelineJobName, parameterMap, api, json) {
+   private def createJobTemplate( pipelineJobName, parameterMap, api, json ) {
        dslFactory.pipelineJob("${pipelineJobName}") {
           parameters {
              if(parameterMap['vhost'] == true)
@@ -59,8 +73,8 @@ class RabbitMQ {
              }
              //if(parameterMap['exchangetype'] == true)
              //{
-                // TODO: A Switch case below is dependent on that EXCHANGE_TYPE exists, however not all jobs needs this variable
-                choiceParam('EXCHANGE_TYPE', ['Direct exchange', 'Fanout exchange', 'Topic exchange', 'Headers exchange'], 'Type of Exchange')
+                // TODO: Dependent on that EXCHANGE_TYPE exists
+                choiceParam('EXCHANGE_TYPE', ['direct', 'fanout', 'topic', 'headers'], 'Type of Exchange')
              //}
              if(parameterMap['queue'] == true)
              {
@@ -68,46 +82,33 @@ class RabbitMQ {
              }
          }
 
+         json = this.jsonArgumentFix(json)
+         def clusterName = this.getClusterName()
+
          definition {
             cps {
                sandbox()
 
                script("""
-
-                  def exchangeType = ''
-
-                  switch ("\${EXCHANGE_TYPE}") {
-                     case 'Direct exchange':
-                        exchangeType = 'direct'
-                        break
-                     case 'Fanout exchange':
-                        exchangeType = 'fanout'
-                        break
-                     case 'Topic exchange':
-                        exchangeType = 'topic'
-                        break
-                     case 'Headers exchange':
-                        exchangeType = 'headers'
-                        break
-                     default:
-                        break
-                  }
-
                   def api = "${api}"
-                  def addess = "http://${host}:${port}/\$api"
+                  def addess = "http://${host}:${port}/\${api}"
                   def credentials = "${username}:${password}"
                   def contentType = "content-type:application/json"
-                  def json = ""
+                  def json = ${json}
+                  def clusterName = "${clusterName}"
 
-                  if("${json}") {
-                     json = "-d${json}"
+                  if("\${json}" != "") {
+                     json = json.replaceAll(/("type"):(".*?")/, /"type":"\${EXCHANGE_TYPE}"/)
+                     json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)
+                     json = "-d\${json}"
+                     println("JSON: \${json}")
                   }
 
                   node("${nodeLabel}") {
                      stage('Creates a new Virtual Host') {
                         withEnv (["ADRESS=\${addess}", "CREDENTIALS=\${credentials}", "CONTENTTYPE=\${contentType}", "JSON=\${json}"]) {
                            sh script: '''
-                              curl -i -u "\$CREDENTIALS" -H "\$CONTENTTYPE" -XPUT "\$JSON" "\$ADRESS"
+                              curl --silent -i -u "\$CREDENTIALS" -H "\$CONTENTTYPE" -XPUT "\$JSON" "\$ADRESS"
                            '''
                         }
                      }
@@ -160,14 +161,26 @@ class RabbitMQ {
          exchangetype: true, 
          queue: false
          ]
-         
+
       def exchangeApi = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}"
-      def exchangeJson = "{\\"type\\":\\"\${exchangeType}\\",\\"auto_delete\\":false,\\"durable\\":true,\\"internal\\":false,\\"arguments\\":{}}"
+      def exchangeJson = "{\"type\":\"\",\"auto_delete\":false,\"durable\":true,\"internal\":false,\"arguments\":{}}"
 
       this.createJobTemplate("RabbitMQ - create new Exchange (${host})", exchangeMap, exchangeApi, exchangeJson)
    }
 
-   def createQueueJob() {} 
+   def createQueueJob() {
+      def queueMap = [
+         vhost: true, 
+         exchangename: false, 
+         exchangetype: false, 
+         queue: true
+         ]
+
+      def queueApi = "api/queues/\${VHOST_NAME}/\${QUEUE_NAME}"
+      def queueJson = "{\"auto_delete\":false,\"durable\":true,\"arguments\":{},\"node\":\"\"}"
+
+      this.createJobTemplate("RabbitMQ - create new Queue (${host})", queueMap, queueApi, queueJson)
+   }
 
    def createPublishJob() {} 
 }
@@ -179,7 +192,8 @@ def RabbitMQ = new RabbitMQ(
     port           : port,
     username       : username,
     password       : password,
-    nodeLabel      : nodeLabel,
+    clusterName    : clusterName,
+    nodeLabel      : nodeLabel
 )
 
 // create jobs
@@ -190,3 +204,4 @@ RabbitMQ.listVhostsJob()
 RabbitMQ.listChannelJob()
 RabbitMQ.createVhostJob()
 RabbitMQ.createExchangeJob()
+RabbitMQ.createQueueJob()

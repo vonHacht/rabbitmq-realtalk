@@ -61,8 +61,8 @@ class RabbitMQ {
 
           def clusterName = this.getClusterName()
 
-          json =  'json = ' + """\'${json}\'""" + '\n'
-          json += 'json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n'
+          json =  """json = """ + """\'${json}\'""" + """\n"""
+          json += """json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n"""
 
           parameters {
              if(parameterMap['vhost'] == true)
@@ -76,7 +76,7 @@ class RabbitMQ {
              if(parameterMap['exchangetype'] == true)
              {
                 choiceParam('EXCHANGE_TYPE', ['direct', 'fanout', 'topic', 'headers'], 'Type of Exchange')
-                json += 'json = json.replaceAll(/("type"):(".*?")/, /"type":"\${EXCHANGE_TYPE}"/)\n'
+                json += """json = json.replaceAll(/("type"):(".*?")/, /"type":"\${EXCHANGE_TYPE}"/)\n"""
              }
              if(parameterMap['queue'] == true)
              {
@@ -85,7 +85,7 @@ class RabbitMQ {
              if(parameterMap['message'] == true)
              {
                 stringParam('MESSAGE', '', 'Message to Publish on Exchange')
-                json += 'json = json.replaceAll(/("payload"):(".*?")/, /"payload":"\${MESSAGE}"/)'
+                json += """json = json.replaceAll(/("payload"):(".*?")/, /"payload":"\${MESSAGE}"/)"""
              }
          }
 

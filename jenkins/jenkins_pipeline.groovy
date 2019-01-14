@@ -30,10 +30,6 @@ class RabbitMQ {
       return "${clusterName}"
    }
 
-   private def jsonArgumentFix(json) {
-      return """\'${json}\'"""
-   }
-
    private def listJobTemplate(pipelineJobName, api) {
        dslFactory.pipelineJob("${pipelineJobName}") {
            definition {
@@ -63,10 +59,10 @@ class RabbitMQ {
    private def createJobTemplate( pipelineJobName, parameterMap, api, json ) {
        dslFactory.pipelineJob("${pipelineJobName}") {
 
-          json = this.jsonArgumentFix(json) + '\n'
-          // Cluster named, one named fixed on server
-          json += 'json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n'
           def clusterName = this.getClusterName()
+
+          json =  'json = ' + """\'${json}\'""" + '\n'
+          json += 'json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n'
 
           parameters {
              if(parameterMap['vhost'] == true)

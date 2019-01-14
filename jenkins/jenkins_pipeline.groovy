@@ -98,8 +98,8 @@ class RabbitMQ {
                   def addess = "http://${host}:${port}/\${api}"
                   def credentials = "${username}:${password}"
                   def contentType = "content-type:application/json"
-                  ${json}
                   def clusterName = "${clusterName}"
+                  ${json}
 
                   if("\${json}" != "") {
                      json = "-d\${json}"
@@ -196,7 +196,7 @@ class RabbitMQ {
          message: true
          ]
 
-      def publishApi = "api/exchanges/\${VHOST_NAME}/\${QUEUE_NAME}/publish"
+      def publishApi = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}/publish"
       def publishJson = "{\"properties\":{},\"routing_key\":\"my key\",\"payload\":\"\",\"payload_encoding\":\"string\"}"
 
       this.createJobTemplate("RabbitMQ - Publish Message On Exchange (${host})", publishMap, publishApi, publishJson)

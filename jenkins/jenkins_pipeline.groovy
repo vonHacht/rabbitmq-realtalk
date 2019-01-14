@@ -204,7 +204,7 @@ class RabbitMQ {
       def publishApi = "api/exchanges/\${VHOST_NAME}/\${QUEUE_NAME}/publish"
       def publishJson = "{\"properties\":{},\"routing_key\":\"my key\",\"payload\":\"\",\"payload_encoding\":\"string\"}"
 
-      this.createJobTemplate("RabbitMQ - Publish Message On Exchange (${host})", queueMap, queueApi, queueJson)
+      this.createJobTemplate("RabbitMQ - Publish Message On Exchange (${host})", publishMap, publishApi, publishJson)
    }
 }
 

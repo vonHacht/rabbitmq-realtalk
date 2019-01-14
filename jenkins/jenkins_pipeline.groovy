@@ -62,6 +62,12 @@ class RabbitMQ {
 
    private def createJobTemplate( pipelineJobName, parameterMap, api, json ) {
        dslFactory.pipelineJob("${pipelineJobName}") {
+
+          json = this.jsonArgumentFix(json) + '\n'
+          // Cluster named, one named fixed on server
+          json += 'json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n'
+          def clusterName = this.getClusterName()
+
           parameters {
              if(parameterMap['vhost'] == true)
              {
@@ -71,19 +77,21 @@ class RabbitMQ {
              {
                 stringParam('EXCHANGE_NAME', '', 'Exchange Name' )
              }
-             //if(parameterMap['exchangetype'] == true)
-             //{
-                // TODO: Dependent on that EXCHANGE_TYPE exists
+             if(parameterMap['exchangetype'] == true)
+             {
                 choiceParam('EXCHANGE_TYPE', ['direct', 'fanout', 'topic', 'headers'], 'Type of Exchange')
-             //}
+                json += 'json = json.replaceAll(/("type"):(".*?")/, /"type":"\${EXCHANGE_TYPE}"/)\n'
+             }
              if(parameterMap['queue'] == true)
              {
                 stringParam('QUEUE_NAME', '', 'Queue Name')
              }
+             if(parameterMap['message'] == true)
+             {
+                stringParam('MESSAGE', '', 'Message to Publish on Exchange')
+                json += 'json = json.replaceAll(/("payload"):(".*?")/, /"payload":"\${MESSAGE}"/)'
+             }
          }
-
-         json = this.jsonArgumentFix(json)
-         def clusterName = this.getClusterName()
 
          definition {
             cps {
@@ -94,12 +102,11 @@ class RabbitMQ {
                   def addess = "http://${host}:${port}/\${api}"
                   def credentials = "${username}:${password}"
                   def contentType = "content-type:application/json"
-                  def json = ${json}
+                  def json = ''
                   def clusterName = "${clusterName}"
 
                   if("\${json}" != "") {
-                     json = json.replaceAll(/("type"):(".*?")/, /"type":"\${EXCHANGE_TYPE}"/)
-                     json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)
+                     ${json}
                      json = "-d\${json}"
                      println("JSON: \${json}")
                   }
@@ -145,7 +152,8 @@ class RabbitMQ {
          vhost: true, 
          exchangename: false, 
          exchangetype: false, 
-         queue: false
+         queue: false,
+         message: false
          ]
 
       def vhostApi = "api/vhosts/\${VHOST_NAME}"
@@ -159,7 +167,8 @@ class RabbitMQ {
          vhost: true, 
          exchangename: true, 
          exchangetype: true, 
-         queue: false
+         queue: false,
+         message: false
          ]
 
       def exchangeApi = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}"
@@ -173,7 +182,8 @@ class RabbitMQ {
          vhost: true, 
          exchangename: false, 
          exchangetype: false, 
-         queue: true
+         queue: true,
+         message: false
          ]
 
       def queueApi = "api/queues/\${VHOST_NAME}/\${QUEUE_NAME}"
@@ -182,7 +192,20 @@ class RabbitMQ {
       this.createJobTemplate("RabbitMQ - create new Queue (${host})", queueMap, queueApi, queueJson)
    }
 
-   def createPublishJob() {} 
+   def createPublishJob() {
+      def publishMap = [
+         vhost: true, 
+         exchangename: true, 
+         exchangetype: false, 
+         queue: false,
+         message: true
+         ]
+
+      def publishApi = "api/exchanges/\${VHOST_NAME}/\${QUEUE_NAME}/publish"
+      def publishJson = "{\"properties\":{},\"routing_key\":\"my key\",\"payload\":\"\",\"payload_encoding\":\"string\"}"
+
+      this.createJobTemplate("RabbitMQ - Publish Message On Exchange (${host})", queueMap, queueApi, queueJson)
+   }
 }
 
 // create class
@@ -205,3 +228,4 @@ RabbitMQ.listChannelJob()
 RabbitMQ.createVhostJob()
 RabbitMQ.createExchangeJob()
 RabbitMQ.createQueueJob()
+RabbitMQ.createPublishJob()

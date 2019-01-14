@@ -61,7 +61,7 @@ class RabbitMQ {
 
           def clusterName = this.getClusterName()
 
-          json =  """json = """ + """\'${json}\'""" + """\n"""
+          json =  """def json = """ + """\'${json}\'""" + """\n"""
           json += """json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n"""
 
           parameters {
@@ -98,11 +98,10 @@ class RabbitMQ {
                   def addess = "http://${host}:${port}/\${api}"
                   def credentials = "${username}:${password}"
                   def contentType = "content-type:application/json"
-                  def json = ''
+                  ${json}
                   def clusterName = "${clusterName}"
 
                   if("\${json}" != "") {
-                     ${json}
                      json = "-d\${json}"
                      println("JSON: \${json}")
                   }

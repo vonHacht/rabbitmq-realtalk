@@ -22,6 +22,32 @@ class RabbitMQ {
    def clusterName
    def nodeLabel
 
+   enum httpAction {
+      GET, PUT, DELETE, POST
+   }
+
+   private def actionToCurlHttp(action) {
+
+      def value = '-XPUT'
+
+      switch (action) {
+         case httpAction.GET:
+            value = '-XGET'
+            break
+         case httpAction.DELETE:
+            value = '-XDELETE'
+            break
+         case httpAction.POST:
+            value = '-XPOST'
+            break
+         case httpAction.PUT:
+         default:
+            break
+      }
+
+      return value
+   }
+
    private def getClusterName() {
       /*
          TODO: It should be possible to figure out the cluster name by calling RabbitMQ
@@ -56,10 +82,11 @@ class RabbitMQ {
        }
    }
 
-   private def createJobTemplate( pipelineJobName, parameterMap, api, json ) {
+   private def createJobTemplate( pipelineJobName, parameterMap, api, json, action ) {
        dslFactory.pipelineJob("${pipelineJobName}") {
 
           def clusterName = this.getClusterName()
+          def actionToCurl = this.actionToCurlHttp(action)
 
           json =  """def json = """ + """\'${json}\'""" + """\n"""
           json += """json = json.replaceAll(/("node"):(".*?")/, /"node":"\${clusterName}"/)\n"""
@@ -81,6 +108,7 @@ class RabbitMQ {
              if(parameterMap['queue'] == true)
              {
                 stringParam('QUEUE_NAME', '', 'Queue Name')
+                json += """json = json.replaceAll(/("routing_key"):(".*?")/, /"routing_key":"\${QUEUE_NAME}"/)\n"""
              }
              if(parameterMap['message'] == true)
              {
@@ -99,6 +127,7 @@ class RabbitMQ {
                   def credentials = "${username}:${password}"
                   def contentType = "content-type:application/json"
                   def clusterName = "${clusterName}"
+                  def action = ${action} 
                   ${json}
 
                   if("\${json}" != "") {
@@ -107,10 +136,10 @@ class RabbitMQ {
                   }
 
                   node("${nodeLabel}") {
-                     stage('Creates a new Virtual Host') {
+                     stage('Executes Curl') {
                         withEnv (["ADRESS=\${addess}", "CREDENTIALS=\${credentials}", "CONTENTTYPE=\${contentType}", "JSON=\${json}"]) {
                            sh script: '''
-                              curl --silent -i -u "\$CREDENTIALS" -H "\$CONTENTTYPE" -XPUT "\$JSON" "\$ADRESS"
+                              curl --silent -i -u "\$CREDENTIALS" -H "\$CONTENTTYPE" ${actionToCurl} "\$JSON" "\$ADRESS"
                            '''
                         }
                      }
@@ -154,7 +183,7 @@ class RabbitMQ {
       def vhostApi = "api/vhosts/\${VHOST_NAME}"
       def vhostJson = ""
 
-     this.createJobTemplate("RabbitMQ - create new Vhost (${host})", vhostMap, vhostApi, vhostJson)
+     this.createJobTemplate("RabbitMQ - create new Vhost (${host})", vhostMap, vhostApi, vhostJson, httpAction.PUT)
    }
 
    def createExchangeJob() {
@@ -169,7 +198,7 @@ class RabbitMQ {
       def exchangeApi = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}"
       def exchangeJson = "{\"type\":\"\",\"auto_delete\":false,\"durable\":true,\"internal\":false,\"arguments\":{}}"
 
-      this.createJobTemplate("RabbitMQ - create new Exchange (${host})", exchangeMap, exchangeApi, exchangeJson)
+      this.createJobTemplate("RabbitMQ - create new Exchange (${host})", exchangeMap, exchangeApi, exchangeJson, httpAction.PUT)
    }
 
    def createQueueJob() {
@@ -184,7 +213,7 @@ class RabbitMQ {
       def queueApi = "api/queues/\${VHOST_NAME}/\${QUEUE_NAME}"
       def queueJson = "{\"auto_delete\":false,\"durable\":true,\"arguments\":{},\"node\":\"\"}"
 
-      this.createJobTemplate("RabbitMQ - create new Queue (${host})", queueMap, queueApi, queueJson)
+      this.createJobTemplate("RabbitMQ - create new Queue (${host})", queueMap, queueApi, queueJson, httpAction.PUT)
    }
 
    def createPublishJob() {
@@ -192,14 +221,14 @@ class RabbitMQ {
          vhost: true, 
          exchangename: true, 
          exchangetype: false, 
-         queue: false,
+         queue: true,
          message: true
          ]
 
       def publishApi = "api/exchanges/\${VHOST_NAME}/\${EXCHANGE_NAME}/publish"
-      def publishJson = "{\"properties\":{},\"routing_key\":\"my key\",\"payload\":\"\",\"payload_encoding\":\"string\"}"
+      def publishJson = "{\"properties\":{},\"routing_key\":\"\",\"payload\":\"\",\"payload_encoding\":\"string\"}"
 
-      this.createJobTemplate("RabbitMQ - Publish Message On Exchange (${host})", publishMap, publishApi, publishJson)
+      this.createJobTemplate("RabbitMQ - Publish Message On Exchange (${host})", publishMap, publishApi, publishJson, httpAction.POST )
    }
 }
 

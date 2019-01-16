@@ -34,3 +34,7 @@ python_virtual_enviroment
 
 # PyCharm
 .idea
+
+# Other
+*.project
+*.settings
